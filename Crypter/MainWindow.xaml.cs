@@ -30,12 +30,24 @@ namespace Crypter
 
         private void File_In_Button_Click(object sender, RoutedEventArgs e)
         {
-
+            OpenFileDialog dialogFileIn = new OpenFileDialog();
+            if (dialogFileIn.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                encryptFilePathIn.Text = dialogFileIn.FileName;
+            }
         }
 
         private void File_Out_Button_Click(object sender, RoutedEventArgs e)
         {
+            OpenFileDialog dialogFileOut = new OpenFileDialog();
 
+            dialogFileOut.CheckFileExists = false;
+            dialogFileOut.ValidateNames = false;
+
+            if (dialogFileOut.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                encryptFilePathOut.Text = dialogFileOut.FileName;
+            }
         }
 
         private void File_Public_Keys_Button_Click(object sender, RoutedEventArgs e)
