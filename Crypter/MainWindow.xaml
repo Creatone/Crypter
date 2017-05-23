@@ -15,45 +15,41 @@
                     <Grid Background="lightGray">
                         <Label Content="Plik wejściowy:" Margin="0 5 0 0"></Label>
                         <TextBox x:Name="encryptFilePathIn" Width="290" Height="20" VerticalAlignment="Top" Margin="0 10 35 0"></TextBox>
-                        <Button Content="Wybierz" Height="20" Width="100" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0 10 10 0" Click="File_In_Button_Click"></Button>
+                        <Button Content="Wybierz" Height="20" Width="100" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0 10 10 0" Click="Button_Click" Tag="encryptionIn"></Button>
                         <Label Content="Plik wynikowy:" Margin="0 45 0 0"></Label>
                         <TextBox x:Name="encryptFilePathOut" Width="290" Height="20" VerticalAlignment="Top" Margin="0 50 35 0"></TextBox>
-                        <Button Content="Wybierz" Height="20" Width="100" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0 50 10 0" Click="File_Out_Button_Click"></Button>
+                        <Button Content="Wybierz" Height="20" Width="100" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0 50 10 0" Click="Button_Click" Tag="encryptionOut"></Button>
                         <Label VerticalAlignment="Top" HorizontalAlignment="Left" HorizontalContentAlignment="Center" Width="250" Margin="5 80 0 0" FontSize="16" Background="DarkGray">RIJNDAEL - USTAWIENIA</Label>
                         <Label VerticalAlignment="Top" HorizontalAlignment="Right" HorizontalContentAlignment="Center" Width="250" Margin="0 80 5 0" FontSize="16" Background="DarkGray">ODBIORCY</Label>
                         <Label VerticalAlignment="Top" Content="Długość klucza:" Margin="5 115 0 0 "></Label>
-                        <ComboBox x:Name="keyLength" VerticalAlignment="Top" HorizontalAlignment="Left" Width="60" Height="20" Margin="120 120 0 0" >
+                        <ComboBox x:Name="comboBoxKeySize" VerticalAlignment="Top" HorizontalAlignment="Left" Width="60" Height="20" Margin="120 120 0 0" SelectionChanged="SelectionChanged" Tag="KeySize">
                             <ComboBoxItem>256</ComboBoxItem>
                             <ComboBoxItem>192</ComboBoxItem>
                             <ComboBoxItem>128</ComboBoxItem>
                         </ComboBox>
                         <Label Content="bitów." Margin="180 115 0 0 " HorizontalAlignment="Left" VerticalAlignment="Top"></Label>
                         <Label Content="Długość bloku:" Margin="5 140 0 0 " VerticalAlignment="Top"></Label>
-                        <ComboBox x:Name="blockLength"  Width="60" Height="20" Margin="120 145 0 0 "  HorizontalAlignment="Left" VerticalAlignment="Top">
+                        <ComboBox x:Name="comboBoxBlockSize"  Width="60" Height="20" Margin="120 145 0 0 "  HorizontalAlignment="Left" VerticalAlignment="Top" SelectionChanged="SelectionChanged" Tag="BlockSize">
                             <ComboBoxItem>256</ComboBoxItem>
                             <ComboBoxItem>192</ComboBoxItem>
                             <ComboBoxItem>128</ComboBoxItem>
                         </ComboBox>
                         <Label Content="bitów." Margin="180 140 0 0 " HorizontalAlignment="Left" VerticalAlignment="Top"></Label>
                         <Label Content="Tryb:" Margin="5 165 0 0" VerticalAlignment="Top"></Label>
-                        <ComboBox x:Name="mode" Width="60" Height="20" Margin="120 170 50 0 "  HorizontalAlignment="Left" VerticalAlignment="Top">
+                        <ComboBox x:Name="comboBoxCipherMode" Width="60" Height="20" Margin="120 170 50 0 "  HorizontalAlignment="Left" VerticalAlignment="Top" SelectionChanged="SelectionChanged" Tag="CipherMode">
                             <ComboBoxItem>ECB</ComboBoxItem>
                             <ComboBoxItem>CBC</ComboBoxItem>
                             <ComboBoxItem>CFB</ComboBoxItem>
                             <ComboBoxItem>OFB</ComboBoxItem>
                         </ComboBox>
                         <Label VerticalAlignment="Top" Content="Długość podbloku:" Margin="5 190 0 0 "></Label>
-                        <ComboBox x:Name="dlugoscPodBloku" VerticalAlignment="Top" HorizontalAlignment="Left" Width="60" Height="20" Margin="120 195 0 0" >
+                        <ComboBox IsEnabled="false" x:Name="comboBoxUnderBlockSize" VerticalAlignment="Top" HorizontalAlignment="Left" Width="60" Height="20" Margin="120 195 0 0" SelectionChanged="SelectionChanged" Tag="UnderBlockSize">
                         </ComboBox>
                         <Label Content="bitów." Margin="180 190 0 0 " HorizontalAlignment="Left" VerticalAlignment="Top"></Label>
-                        <ListBox x:Name="listOdbiorcy" SelectionMode="Multiple" Margin="0 120 5 0"  VerticalAlignment="Top" HorizontalAlignment="Right" Height="110" Width="250">
+                        <ListBox x:Name="listOdbiorcy" SelectionMode="Multiple" Margin="0 120 5 0"  VerticalAlignment="Top" HorizontalAlignment="Right" Height="170" Width="250">
                         </ListBox>
-                        <Label VerticalAlignment="Top" HorizontalContentAlignment="Center" Margin="0 240 0 0" FontSize="16" Background="DarkGray">ZARZĄDZANIE KLUCZAMI</Label>
-                        <Label Content="Folder kluczy publicznych:" VerticalAlignment="Top" Margin="5 270 0 0"></Label>
-                        <TextBox x:Name="publicKeysPath" Width="200" Height="20" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="150 275 0 0" ></TextBox>
-                        <Button Content="Wybierz" Height="20" Width="100" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0 275 40 0" Click="File_Public_Keys_Button_Click"></Button>
-                        <Button Content="Szyfruj" Height="20" Width="100" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0 310 0 0" Click="Encrypt_Button_Click"></Button>
-                        <ProgressBar Value="0" VerticalAlignment="Top" Margin="20 340 20 0" Height="10"></ProgressBar>
+                        <Button Content="Szyfruj" Height="20" Width="100" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0 310 0 0" Click="Button_Click" Tag="encryptionAccept"></Button>
+                        <ProgressBar x:Name="progressBarEncrypt" VerticalAlignment="Top" Margin="20 340 20 0" Height="10"></ProgressBar>
                     </Grid>
                 </Grid>
             </TabItem>
@@ -62,21 +58,17 @@
                     <Grid Background="lightGray">
                         <Label Content="Plik wejściowy:" Margin="0 5 0 0"></Label>
                         <TextBox x:Name="decryptFilePathIn" Width="290" Height="20" VerticalAlignment="Top" Margin="0 10 35 0"></TextBox>
-                        <Button Content="Wybierz" Height="20" Width="100" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0 10 10 0" Click="File_In_Button_Click"></Button>
+                        <Button Content="Wybierz" Height="20" Width="100" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0 10 10 0" Click="Button_Click" Tag="decryptionIn"></Button>
                         <Label Content="Plik wynikowy:" Margin="0 45 0 0"></Label>
                         <TextBox x:Name="decryptFilePathOut" Width="290" Height="20" VerticalAlignment="Top" Margin="0 50 35 0"></TextBox>
-                        <Button Content="Wybierz" Height="20" Width="100" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0 50 10 0" Click="File_Out_Button_Click"></Button>
+                        <Button Content="Wybierz" Height="20" Width="100" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0 50 10 0" Click="Button_Click" Tag="decryptionOut"></Button>
                         <Label VerticalAlignment="Top" HorizontalAlignment="Left" HorizontalContentAlignment="Center" Width="250" Margin="5 80 0 0" FontSize="16" Background="DarkGray">ODBIORCY</Label>
                         <Label VerticalAlignment="Top" HorizontalAlignment="Right" HorizontalContentAlignment="Center" Width="250" Margin="0 80 5 0" FontSize="16" Background="DarkGray">HASŁO KLUCZA PRYWATNEGO</Label>
-                        <ListBox SelectionMode="Multiple" Margin="5 120 5 0"  VerticalAlignment="Top" HorizontalAlignment="Left" Height="110" Width="250">
+                        <ListBox SelectionMode="Multiple" Margin="5 120 5 0"  VerticalAlignment="Top" HorizontalAlignment="Left" Height="170" Width="250">
                         </ListBox>
                         <TextBox Width="130" Height="20" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0 120 60 0"></TextBox>
-                        <Label VerticalAlignment="Top" HorizontalContentAlignment="Center" Margin="0 240 0 0" FontSize="16" Background="DarkGray">ZARZĄDZANIE KLUCZAMI</Label>
-                        <Label Content="Folder kluczy prywatnych:" VerticalAlignment="Top" Margin="5 275 0 0"></Label>
-                        <TextBox Width="200" Height="20" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="150 280 0 0"></TextBox>
-                        <Button Content="Wybierz" Height="20" Width="100" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0 280 40 0"></Button>
-                        <Button Content="Odszyfruj" Height="20" Width="100" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0 320 0 0" Click="Decrypt_Button_Click"></Button>
-                        <ProgressBar Value="10" VerticalAlignment="Top" Margin="20 350 20 0" Height="10"></ProgressBar>
+                        <Button Content="Odszyfruj" Height="20" Width="100" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0 310 0 0" Click="Button_Click" Tag="decryptionAccept"></Button>
+                        <ProgressBar x:Name="progressBarDecrypt" VerticalAlignment="Top" Margin="20 340 20 0" Height="10"></ProgressBar>
                     </Grid>
                 </Grid>
             </TabItem>

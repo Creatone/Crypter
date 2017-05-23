@@ -15,6 +15,8 @@ using System.Windows.Shapes;
 using System.IO;
 using System.Windows.Forms;
 using System.Security.Cryptography;
+using System.Threading;
+using System.ComponentModel;
 
 namespace Crypter
 {
@@ -23,18 +25,73 @@ namespace Crypter
     /// </summary>
     public partial class MainWindow : Window
     {
+        Encryption encryption;
+        int feedbackSize = 128;
+
+        private readonly BackgroundWorker workerEncrypt = new BackgroundWorker();
+        private readonly BackgroundWorker workerDecrypt = new BackgroundWorker();
+
+
         public MainWindow()
         {
             InitializeComponent();
+            encryption = new Encryption();
+            workerEncrypt.DoWork += workerEncrypt_DoWork;
+            workerEncrypt.RunWorkerCompleted += workerEncrypt_RunWorkerCompleted;
+            workerDecrypt.DoWork += workerDecrypt_DoWork;
+            workerDecrypt.RunWorkerCompleted += workerDecrypt_RunWorkerCompleted;
         }
 
-        private void File_In_Button_Click(object sender, RoutedEventArgs e)
+        private void Button_Click(object sender, RoutedEventArgs e)
         {
-            OpenFileDialog dialogFileIn = new OpenFileDialog();
-            if (dialogFileIn.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            System.Windows.Controls.Button senderButton = sender as System.Windows.Controls.Button;
+
+            string buttonTag = (string)senderButton.Tag;
+
+            if (buttonTag == "encryptionIn")
+                encryption.HandleFileIn(encryptFilePathIn);
+            else if (buttonTag == "encryptionOut")
+                encryption.HandleFileOut(encryptFilePathOut);
+            else if (buttonTag == "encryptionAccept")
             {
-                encryptFilePathIn.Text = dialogFileIn.FileName;
+                progressBarEncrypt.IsIndeterminate = true;
+                IsEnabled = false;
+                workerEncrypt.RunWorkerAsync();
             }
+            else if (buttonTag == "decryptionIn")
+                encryption.HandleFileIn(decryptFilePathIn);
+            else if (buttonTag == "decryptionOut")
+                encryption.HandleFileOut(decryptFilePathOut);
+            else if (buttonTag == "decryptionAccept")
+            {
+                progressBarDecrypt.IsIndeterminate = true;
+                IsEnabled = false;
+                workerDecrypt.RunWorkerAsync();
+            }
+        }
+
+        private void workerEncrypt_DoWork(object sender, DoWorkEventArgs e)
+        {
+            encryption.HandleEncryption();
+        }
+
+        private void workerEncrypt_RunWorkerCompleted(object sender,
+                                               RunWorkerCompletedEventArgs e)
+        {
+            IsEnabled = true;
+            progressBarEncrypt.IsIndeterminate = false;
+        }
+
+        private void workerDecrypt_DoWork(object sender, DoWorkEventArgs e)
+        {
+            encryption.HandleDecryption();
+        }
+
+        private void workerDecrypt_RunWorkerCompleted(object sender,
+                                               RunWorkerCompletedEventArgs e)
+        {
+            IsEnabled = true;
+            progressBarDecrypt.IsIndeterminate = false;
         }
 
         private void File_Out_Button_Click(object sender, RoutedEventArgs e)
@@ -50,19 +107,79 @@ namespace Crypter
             }
         }
 
-        private void File_Public_Keys_Button_Click(object sender, RoutedEventArgs e)
+        private void SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            System.Windows.Controls.ComboBox senderComboBox = sender as System.Windows.Controls.ComboBox;
 
+            string comboBoxTag = (string)senderComboBox.Tag;
+
+            if (comboBoxTag == "CipherMode")
+            {
+                ComboBoxItem tempItem = (ComboBoxItem)comboBoxCipherMode.SelectedItem;
+
+                string cipherMode = (string)tempItem.Content;
+
+                if (cipherMode == "ECB" || cipherMode == "CBC")
+                {
+                    comboBoxUnderBlockSize.IsEnabled = false;
+                    comboBoxUnderBlockSize.Items.Clear();
+                }
+                else
+                {
+                    comboBoxUnderBlockSize.IsEnabled = true;
+                    FillFeedbackSize();
+                }
+
+                encryption.HandleCipherMode(cipherMode);
+            }
+            else if (comboBoxTag == "KeySize")
+            {
+                ComboBoxItem tempItem = (ComboBoxItem)comboBoxKeySize.SelectedItem;
+
+                string keySize = (string)tempItem.Content;
+
+                encryption.HandleKeySize(keySize);
+
+            }
+            else if (comboBoxTag == "BlockSize")
+            {
+                ComboBoxItem tempItem = (ComboBoxItem)comboBoxBlockSize.SelectedItem;
+
+                string blockSize = (string)tempItem.Content;
+                feedbackSize = Int32.Parse(blockSize);
+                FillFeedbackSize();
+                encryption.HandleBlockSize(blockSize);            
+
+            }
+            else if (comboBoxTag == "UnderBlockSize")
+            {
+
+            }
         }
 
-        private void Encrypt_Button_Click(object sender, RoutedEventArgs e)
+        void FillFeedbackSize()
         {
-            
+            comboBoxUnderBlockSize.Items.Clear();
+
+            for (int i = 2; i <= feedbackSize; i += 2)
+            {
+                if (isPowerOfTwo(i) || i % 8 == 0)
+                {
+                    ComboBoxItem comboItem = new ComboBoxItem();
+                    comboItem.Content = i;
+                    comboBoxUnderBlockSize.Items.Add(comboItem);
+                }
+            }
         }
 
-        private void Decrypt_Button_Click(object sender, RoutedEventArgs e)
+        public static bool isPowerOfTwo(int x)
         {
-         
+            while (((x % 2) == 0) && x > 1)
+            {
+                x /= 2;
+            }
+            return (x == 1);
         }
+
     }
 }
