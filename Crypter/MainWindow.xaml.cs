@@ -89,14 +89,7 @@ namespace Crypter
 
                 workerDecrypt.RunWorkerAsync();
             }
-            else if (buttonTag == "addReceiver")
-            {
-                encryption.HandleReceivers();
-            }
-            else if (buttonTag == "addReceiverDecrypt")
-            {
-                encryption.HandleReceiversDecrypt();
-            } else if (buttonTag == "addRSA")
+            else if (buttonTag == "addRSA")
             {
                 encryption.AddKeys(textBoxNewUser.Text,passwordBoxNewUser.Password);
             }

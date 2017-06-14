@@ -14,6 +14,8 @@ using System.Text;
 
 namespace Crypter
 {
+    // Each file is encrypted with the Rijndael algorithm, whose key is encrypted by the RSA.
+    // Application provide the recipients.
     public class User
     {
         public string Name = "";
@@ -28,10 +30,11 @@ namespace Crypter
 
     class Encryption
     {
-        public OpenFileDialog dialogFileIn;
-        public OpenFileDialog dialogFileOut;
-        public const string ENCRYPTION_ALGORITHM = "AES(Rijndael)";
-        public CipherMode cipherMode;
+
+        OpenFileDialog dialogFileIn;
+        OpenFileDialog dialogFileOut;
+        const string ENCRYPTION_ALGORITHM = "AES(Rijndael)";
+        CipherMode cipherMode;
 
         byte[] key;
         byte[] IV;
@@ -42,18 +45,21 @@ namespace Crypter
 
         PaddingMode paddingMode = PaddingMode.PKCS7;
 
-        public List<User> receiverList = new List<User>();
-        public List<User> receiverDecryptList = new List<User>();
-        public List<User> selectedUsers;
-        public User selectedUser;
+        List<User> receiverList = new List<User>();
+        List<User> receiverDecryptList = new List<User>();
+        List<User> selectedUsers;
+        User selectedUser;
 
-        public string receiversPath = Path.GetDirectoryName(Application.ExecutablePath) + "\\public\\";
-        public string receiversDecryptPath = Path.GetDirectoryName(Application.ExecutablePath) + "\\private\\";
 
-        public string password = "";
+        // Paths with public and private RSA keys of receivers.
+        string receiversPath = Path.GetDirectoryName(Application.ExecutablePath) + "\\public\\";
+        string receiversDecryptPath = Path.GetDirectoryName(Application.ExecutablePath) + "\\private\\";
+
+        string password = "";
 
         public Encryption(System.Windows.Controls.ListView listViewReceiver, System.Windows.Controls.ListView listViewReceiverDecrypt)
         {
+            // Create directories for RSA keys if they doesn't exists.
             if (!Directory.Exists(receiversPath))
                 Directory.CreateDirectory(receiversPath);
             if (!Directory.Exists(receiversDecryptPath))
@@ -65,11 +71,13 @@ namespace Crypter
             listViewReceiverDecrypt.ItemsSource = receiverDecryptList;
         }
 
+        // Interaction with GUI
         public void HandleSelectedUsers(List<User> tempSelectedUsers)
         {
             selectedUsers = tempSelectedUsers;
         }
 
+        // Interaction with GUI
         public void HandleFileIn(System.Windows.Controls.TextBox pathTextBox)
         {
             dialogFileIn = new OpenFileDialog();
@@ -78,22 +86,28 @@ namespace Crypter
             {
                 pathTextBox.Text = dialogFileIn.FileName;
             }
+            else
+                return;
 
             AddReceiversDecrypt(dialogFileIn.FileName);
 
         }
-            
+
+        // Interaction with GUI
         public void HandleFileOut(System.Windows.Controls.TextBox pathTextBox)
         {
             dialogFileOut = new OpenFileDialog();
             dialogFileOut.CheckFileExists = false;
 
-            if(dialogFileOut.ShowDialog() == DialogResult.OK)
+            if (dialogFileOut.ShowDialog() == DialogResult.OK)
             {
                 pathTextBox.Text = dialogFileOut.FileName;
             }
+            else
+                return;
         }
 
+        // Interaction with GUI
         public void HandleCipherMode(string tempCipherMode)
         {
             if (tempCipherMode == "ECB")
@@ -107,28 +121,28 @@ namespace Crypter
 
         }
 
+        // Interaction with GUI
         public void HandleSelectedUser(User tempSelectedUser)
         {
             selectedUser = tempSelectedUser;
         }
 
-        public void HandleReceiversDecrypt()
+        // Each receiver had encrypted private key with own password hash(SHA-256) as a session key for Rijndael ECB 256 bits encryption.
+        public void AddKeys(string name, string password)
         {
-            OpenFileDialog dialog = new OpenFileDialog();
-            dialog.CheckPathExists = true;
-            dialog.Multiselect = true;
-            if (dialog.ShowDialog() == DialogResult.OK)
-            {
-                AddReceiversDecrypt(dialog.FileNames);
-            }
-        }
-
-        public void AddKeys(string name,string password)
-        {
+            // Generate new RSA.
             var rsa = new RSACryptoServiceProvider();
-            File.WriteAllText(receiversPath+name+".pub",rsa.ToXmlString(false));
+
+            // Write public key to folder with public keys.
+            File.WriteAllText(receiversPath + name + ".pub", rsa.ToXmlString(false));
+            
+            // Write temporary private key.
             File.WriteAllText(receiversDecryptPath + name + "_temp", rsa.ToXmlString(true));
+
+            // Update list.
             AddReceivers();
+
+            // Encrypt private key.
             using (Rijndael rijAlg = Rijndael.Create())
             {
                 byte[] mybytes = new byte[32];
@@ -141,7 +155,7 @@ namespace Crypter
 
                 ICryptoTransform encryptor = rijAlg.CreateEncryptor(rijAlg.Key, rijAlg.IV);
 
-                FileStream fsIn = new FileStream(receiversDecryptPath + name+"_temp", FileMode.Open);
+                FileStream fsIn = new FileStream(receiversDecryptPath + name + "_temp", FileMode.Open);
                 FileStream fsOut = new FileStream(receiversDecryptPath + name, FileMode.CreateNew);
 
                 CryptoStream cs = new CryptoStream(fsOut, encryptor, CryptoStreamMode.Write);
@@ -155,35 +169,43 @@ namespace Crypter
                 fsIn.Close();
                 cs.Close();
                 fsOut.Close();
+
+                // Delete temporary key.
                 File.Delete(receiversDecryptPath + name + "_temp");
             }
         }
 
+        // Interaction with GUI or encrypted file header.
         public void HandleKeySize(string tempKeySize)
         {
             keySize = int.Parse(tempKeySize);
         }
 
+        // Interaction with GUI or encrypted file header.
         public void HandleBlockSize(string tempBlockSize)
         {
             blockSize = int.Parse(tempBlockSize);
         }
 
+        // Interaction with GUI or encrypted file header.
         public void HandleFeedbackSize(string tempFeedbackSize)
         {
             feedbackSize = int.Parse(tempFeedbackSize);
         }
 
+        // Interaction with encrypted file header.
         public void HandleIV(string tempIV)
         {
             IV = Convert.FromBase64String(tempIV);
         }
 
+        // Interaction with encrypted file header.
         public void HandleKey(string tempKey)
         {
             key = Convert.FromBase64String(tempKey);
         }
 
+        // Checking fields before encrypt/decrypt.
         public bool Check()
         {
             if (dialogFileIn == null)
@@ -196,25 +218,15 @@ namespace Crypter
                 MessageBox.Show("Nie podałeś pliku do zapisu!");
                 return false;
             }
-            if (cipherMode==0)
+            if (cipherMode == 0)
             {
                 MessageBox.Show("Nie podałeś trybu szyfrowania!");
                 return false;
-            }   
+            }
             return true;
         }
 
-        public void HandleReceivers()
-        {
-            OpenFileDialog dialog = new OpenFileDialog();
-            dialog.CheckPathExists = true;
-            dialog.Multiselect = true;
-            if (dialog.ShowDialog() == DialogResult.OK)
-            {
-                AddReceivers(dialog.FileNames);
-            }
-        }
-
+        // Add receivers from path.
         public void AddReceivers()
         {
             receiverList.Clear();
@@ -222,7 +234,7 @@ namespace Crypter
 
             foreach (var receiver in receivers)
             {
-                User newUser = new User() { Name = Path.GetFileNameWithoutExtension(receiver), SessionKey=File.ReadAllText(receiver) };
+                User newUser = new User() { Name = Path.GetFileNameWithoutExtension(receiver), SessionKey = File.ReadAllText(receiver) };
                 receiverList.Add(newUser);
             }
 
@@ -230,6 +242,7 @@ namespace Crypter
             view.Refresh();
         }
 
+        // Add receivers from encrypted file xml.
         public void AddReceiversDecrypt(string decryptPath)
         {
             receiverDecryptList.Clear();
@@ -244,98 +257,29 @@ namespace Crypter
                     read.Read();
                     tempName = read.Value;
                     User newUser;
-                    if (File.Exists(receiversDecryptPath + tempName)) {
-                        newUser = new User() { Name = Path.GetFileNameWithoutExtension(tempName), encryptedKey = File.ReadAllBytes(receiversDecryptPath+tempName) };
-                    } else
+                    if (File.Exists(receiversDecryptPath + tempName))
+                    {
+                        newUser = new User() { Name = Path.GetFileNameWithoutExtension(tempName), encryptedKey = File.ReadAllBytes(receiversDecryptPath + tempName) };
+                    }
+                    else
                     {
                         newUser = new User() { Name = Path.GetFileNameWithoutExtension(tempName), encryptedKey = null };
                     }
                     receiverDecryptList.Add(newUser);
                 }
-            } catch
+            }
+            catch
             {
                 view.Refresh();
             }
-            
-            view.Refresh();
-        }
 
-        public void AddReceivers(string[] receivers)
-        {
-            foreach(var receiver in receivers)
-            {
-                string newReceiverPath = receiversPath + Path.GetFileName(receiver);
-
-                if (File.Exists(receiversPath + Path.GetFileName(receiver)))
-                {
-                    int i = 1;
-                    while (true)
-                    {
-                        newReceiverPath = receiversPath + Path.GetFileNameWithoutExtension(receiver) + "(" + i + ")" + Path.GetExtension(receiver);
-                        if (File.Exists(newReceiverPath))
-                            i++;
-                        else
-                            break;
-                    }
-                }
-                File.Copy(receiver, newReceiverPath);
-                User newUser = new User();             
-                newUser.Name = Path.GetFileNameWithoutExtension(newReceiverPath);
-
-                StreamReader sr = new StreamReader(newReceiverPath);
-
-                string rsaKey = sr.ReadLine();
-
-                sr.Close();
-
-                newUser.SessionKey = rsaKey;
-
-                receiverList.Add(newUser);
-                               
-            }
-
-            ICollectionView view = CollectionViewSource.GetDefaultView(receiverList);
-            view.Refresh();
-        }
-
-        public void AddReceiversDecrypt(string[] receivers)
-        {
-            foreach (var receiver in receivers)
-            {
-                string newReceiverPath = receiversDecryptPath + Path.GetFileName(receiver);
-
-                if (File.Exists(receiversDecryptPath + Path.GetFileName(receiver)))
-                {
-                    int i = 1;
-                    while (true)
-                    {
-                        newReceiverPath = receiversDecryptPath + Path.GetFileNameWithoutExtension(receiver) + "(" + i + ")" + Path.GetExtension(receiver);
-                        if (File.Exists(newReceiverPath))
-                            i++;
-                        else
-                            break;
-                    }
-                }
-                File.Copy(receiver, newReceiverPath);
-                User newUser = new User();
-                newUser.Name = Path.GetFileNameWithoutExtension(newReceiverPath);
-
-                byte[] rsaEncrypted = File.ReadAllBytes(newReceiverPath);
-
-                newUser.encryptedKey = rsaEncrypted;
-
-                receiverDecryptList.Add(newUser);
-
-            }
-
-            ICollectionView view = CollectionViewSource.GetDefaultView(receiverDecryptList);
             view.Refresh();
         }
 
         public void GenerateKeyAndIV()
         {
             Random random = new Random((int)DateTime.Now.Ticks);
-            key = new byte[keySize/8];
+            key = new byte[keySize / 8];
             random.NextBytes(key);
             IV = new byte[blockSize / 8];
             random.NextBytes(IV);
@@ -361,7 +305,7 @@ namespace Crypter
         {
             paddingMode = PaddingMode.PKCS7;
             ReadXmlHeader();
-            
+
             DecryptBytes(worker);
 
         }
@@ -387,12 +331,12 @@ namespace Crypter
 
                 ICryptoTransform decryptor = rijAlg.CreateDecryptor(rijAlg.Key, rijAlg.IV);
 
-                byte[] readFromFile = File.ReadAllBytes(receiversDecryptPath+selectedUser.Name);
+                byte[] readFromFile = File.ReadAllBytes(receiversDecryptPath + selectedUser.Name);
                 byte[] score = null;
 
-                using(MemoryStream ms = new MemoryStream())
+                using (MemoryStream ms = new MemoryStream())
                 {
-                    using(CryptoStream cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Write))
+                    using (CryptoStream cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Write))
                     {
                         cs.Write(readFromFile, 0, readFromFile.Length);
                     }
@@ -409,14 +353,14 @@ namespace Crypter
             XmlWriterSettings settings = new XmlWriterSettings();
             settings.Indent = true;
             settings.WriteEndDocumentOnClose = true;
-            using (XmlWriter write = XmlWriter.Create(dialogFileOut.FileName,settings)) 
+            using (XmlWriter write = XmlWriter.Create(dialogFileOut.FileName, settings))
             {
                 write.WriteStartDocument();
                 write.WriteStartElement("EncryptedFileHeader");
                 write.WriteElementString("Algorithm", ENCRYPTION_ALGORITHM);
                 write.WriteElementString("CipherMode", cipherMode.ToString());
                 write.WriteElementString("KeySize", keySize.ToString());
-                write.WriteElementString("BlockSize",blockSize.ToString());
+                write.WriteElementString("BlockSize", blockSize.ToString());
 
                 if (cipherMode != CipherMode.ECB && cipherMode != CipherMode.CBC)
                     write.WriteElementString("FeedbackSize", feedbackSize.ToString());
@@ -426,7 +370,7 @@ namespace Crypter
 
                 write.WriteStartElement("ApprovedUsers");
 
-                foreach(var element in selectedUsers)
+                foreach (var element in selectedUsers)
                 {
                     byte[] sessionKey = RSAPublicKeyEncryption(element.SessionKey);
                     write.WriteStartElement("User");
@@ -439,12 +383,12 @@ namespace Crypter
                 write.Close();
             }
 
-            File.AppendAllText(dialogFileOut.FileName, "\n"+Char.ToString((char)3));
-           
+            File.AppendAllText(dialogFileOut.FileName, "\n" + Char.ToString((char)3));
+
         }
 
         public byte[] RSAPublicKeyEncryption(string publicKey)
-        {         
+        {
             var rsa = new RSACryptoServiceProvider();
             rsa.FromXmlString(publicKey);
             var encryptedByteArray = rsa.Encrypt(key, false).ToArray();
@@ -460,7 +404,7 @@ namespace Crypter
         }
 
         public void ReadXmlHeader()
-        {                                    
+        {
             using (XmlReader read = XmlReader.Create(dialogFileIn.FileName))
             {
                 if (read.IsStartElement("EncryptedFileHeader"))
@@ -475,13 +419,13 @@ namespace Crypter
                     read.Read();
                     HandleBlockSize(read.Value);
 
-                    if(cipherMode==CipherMode.CFB||cipherMode==CipherMode.OFB)
+                    if (cipherMode == CipherMode.CFB || cipherMode == CipherMode.OFB)
                     {
                         read.ReadToFollowing("FeedbackSize");
                         read.Read();
                         HandleFeedbackSize(read.Value);
                     }
-                    if(cipherMode!=CipherMode.ECB)
+                    if (cipherMode != CipherMode.ECB)
                     {
                         read.ReadToFollowing("IV");
                         read.Read();
@@ -505,7 +449,8 @@ namespace Crypter
                         }
                         HandlePassword();
                         key = RSAPrivateKeyDecryption(selectedUser.SessionKey);
-                    } catch
+                    }
+                    catch
                     {
                         byte[] encPassword = GetHash(password);
 
@@ -513,7 +458,7 @@ namespace Crypter
 
                         paddingMode = PaddingMode.Zeros;
                     }
-                           
+
                 }
 
                 read.Close();
@@ -548,7 +493,7 @@ namespace Crypter
                 rijAlg.BlockSize = blockSize;
                 rijAlg.Key = key;
 
-                if(cipherMode==CipherMode.CFB||cipherMode==CipherMode.OFB)
+                if (cipherMode == CipherMode.CFB || cipherMode == CipherMode.OFB)
                     rijAlg.FeedbackSize = feedbackSize;
                 if (cipherMode == CipherMode.OFB)
                     rijAlg.Mode = CipherMode.CFB;
@@ -556,7 +501,7 @@ namespace Crypter
                     rijAlg.IV = IV;
 
                 ICryptoTransform encryptor = rijAlg.CreateEncryptor(rijAlg.Key, rijAlg.IV);
-                
+
                 FileStream fsIn = new FileStream(dialogFileIn.FileName, FileMode.Open);
                 FileStream fsOut = new FileStream(dialogFileOut.FileName, FileMode.Append);
 
@@ -578,7 +523,7 @@ namespace Crypter
                 fsIn.Close();
                 cs.Close();
                 fsOut.Close();
-                
+
             }
         }
 
@@ -591,7 +536,7 @@ namespace Crypter
                 rijAlg.BlockSize = blockSize;
                 rijAlg.Key = key;
                 rijAlg.Padding = paddingMode;
-                if (cipherMode == CipherMode.CFB||cipherMode==CipherMode.OFB)
+                if (cipherMode == CipherMode.CFB || cipherMode == CipherMode.OFB)
                     rijAlg.FeedbackSize = feedbackSize;
                 if (cipherMode == CipherMode.OFB)
                     rijAlg.Mode = CipherMode.CFB;
@@ -602,7 +547,7 @@ namespace Crypter
 
                 var headerOffset = GetHeaderByteCount();
                 FileStream fsIn = new FileStream(dialogFileIn.FileName, FileMode.Open);
-                fsIn.Seek(headerOffset,SeekOrigin.Begin);
+                fsIn.Seek(headerOffset, SeekOrigin.Begin);
                 FileStream fsOut = new FileStream(dialogFileOut.FileName, FileMode.Create);
                 CryptoStream cs = new CryptoStream(fsIn, decryptor, CryptoStreamMode.Read);
 
@@ -623,7 +568,7 @@ namespace Crypter
                 worker.ReportProgress(100);
 
                 cs.Close();
-                fsIn.Close();     
+                fsIn.Close();
                 fsOut.Close();
 
             }
