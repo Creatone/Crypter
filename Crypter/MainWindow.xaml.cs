@@ -27,19 +27,25 @@ namespace Crypter
     {
         Encryption encryption;
         int feedbackSize = 128;
-
+        public List<User> selectedUsers = new List<User>();
+        public User selectedUser = new User();
         private readonly BackgroundWorker workerEncrypt = new BackgroundWorker();
         private readonly BackgroundWorker workerDecrypt = new BackgroundWorker();
-
 
         public MainWindow()
         {
             InitializeComponent();
-            encryption = new Encryption();
+
+            encryption = new Encryption(listViewReceiver,listViewReceiverDecrypt);
+            workerEncrypt.WorkerReportsProgress = true;
             workerEncrypt.DoWork += workerEncrypt_DoWork;
             workerEncrypt.RunWorkerCompleted += workerEncrypt_RunWorkerCompleted;
+            workerEncrypt.ProgressChanged += workerEncrypt_ProgressChanged;
+
+            workerDecrypt.WorkerReportsProgress = true;
             workerDecrypt.DoWork += workerDecrypt_DoWork;
             workerDecrypt.RunWorkerCompleted += workerDecrypt_RunWorkerCompleted;
+            workerDecrypt.ProgressChanged += workerDecrypt_ProgressChanged;
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)
@@ -54,57 +60,80 @@ namespace Crypter
                 encryption.HandleFileOut(encryptFilePathOut);
             else if (buttonTag == "encryptionAccept")
             {
-                progressBarEncrypt.IsIndeterminate = true;
                 IsEnabled = false;
+
+                foreach (var element in listViewReceiver.SelectedItems)
+                {
+                    User user = (User)element;
+                    selectedUsers.Add(user);
+                }
+
+                encryption.HandleSelectedUsers(selectedUsers);
                 workerEncrypt.RunWorkerAsync();
             }
             else if (buttonTag == "decryptionIn")
+            {
                 encryption.HandleFileIn(decryptFilePathIn);
+            }
             else if (buttonTag == "decryptionOut")
                 encryption.HandleFileOut(decryptFilePathOut);
             else if (buttonTag == "decryptionAccept")
             {
-                progressBarDecrypt.IsIndeterminate = true;
                 IsEnabled = false;
+
+                selectedUser = (User)listViewReceiverDecrypt.SelectedItem;
+
+                encryption.HandleSelectedUser(selectedUser);
+
+                encryption.HandlePassword(password.Password);
+
                 workerDecrypt.RunWorkerAsync();
+            }
+            else if (buttonTag == "addReceiver")
+            {
+                encryption.HandleReceivers();
+            }
+            else if (buttonTag == "addReceiverDecrypt")
+            {
+                encryption.HandleReceiversDecrypt();
+            } else if (buttonTag == "addRSA")
+            {
+                encryption.AddKeys(textBoxNewUser.Text,passwordBoxNewUser.Password);
             }
         }
 
         private void workerEncrypt_DoWork(object sender, DoWorkEventArgs e)
         {
-            encryption.HandleEncryption();
+            var backgroundWorker = sender as BackgroundWorker;
+            encryption.HandleEncryption(backgroundWorker);
         }
 
-        private void workerEncrypt_RunWorkerCompleted(object sender,
-                                               RunWorkerCompletedEventArgs e)
+        public void workerEncrypt_ProgressChanged(object sender,ProgressChangedEventArgs e)
+        {
+            progressBarEncrypt.Value = e.ProgressPercentage;
+        }
+
+        private void workerEncrypt_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             IsEnabled = true;
-            progressBarEncrypt.IsIndeterminate = false;
+            progressBarEncrypt.Value=0;
         }
 
         private void workerDecrypt_DoWork(object sender, DoWorkEventArgs e)
         {
-            encryption.HandleDecryption();
+            var backgroundWorker = sender as BackgroundWorker;
+            encryption.HandleDecryption(backgroundWorker);
         }
 
-        private void workerDecrypt_RunWorkerCompleted(object sender,
-                                               RunWorkerCompletedEventArgs e)
+        public void workerDecrypt_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            progressBarDecrypt.Value = e.ProgressPercentage;
+        }
+
+        private void workerDecrypt_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             IsEnabled = true;
-            progressBarDecrypt.IsIndeterminate = false;
-        }
-
-        private void File_Out_Button_Click(object sender, RoutedEventArgs e)
-        {
-            OpenFileDialog dialogFileOut = new OpenFileDialog();
-
-            dialogFileOut.CheckFileExists = false;
-            dialogFileOut.ValidateNames = false;
-
-            if (dialogFileOut.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-            {
-                encryptFilePathOut.Text = dialogFileOut.FileName;
-            }
+            progressBarDecrypt.Value = 0;
         }
 
         private void SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -126,6 +155,8 @@ namespace Crypter
                 }
                 else
                 {
+                    comboBoxUnderBlockSize.SelectedItem = null;
+                    comboBoxUnderBlockSize.Items.Clear();
                     comboBoxUnderBlockSize.IsEnabled = true;
                     FillFeedbackSize();
                 }
@@ -153,7 +184,14 @@ namespace Crypter
             }
             else if (comboBoxTag == "UnderBlockSize")
             {
+                ComboBoxItem tempItem = (ComboBoxItem)comboBoxUnderBlockSize.SelectedItem;
 
+                if (tempItem == null)
+                    return;
+
+                string tempFeedbackSize = tempItem.Content.ToString();
+
+                encryption.HandleFeedbackSize(tempFeedbackSize);
             }
         }
 
@@ -161,7 +199,7 @@ namespace Crypter
         {
             comboBoxUnderBlockSize.Items.Clear();
 
-            for (int i = 2; i <= feedbackSize; i += 2)
+            for (int i = 8; i <= feedbackSize; i += 2)
             {
                 if (isPowerOfTwo(i) || i % 8 == 0)
                 {
@@ -180,6 +218,5 @@ namespace Crypter
             }
             return (x == 1);
         }
-
     }
 }
