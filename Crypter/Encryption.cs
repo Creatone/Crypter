@@ -71,13 +71,13 @@ namespace Crypter
             listViewReceiverDecrypt.ItemsSource = receiverDecryptList;
         }
 
-        // Interaction with GUI
+        // Interaction with GUI.
         public void HandleSelectedUsers(List<User> tempSelectedUsers)
         {
             selectedUsers = tempSelectedUsers;
         }
 
-        // Interaction with GUI
+        // Interaction with GUI.
         public void HandleFileIn(System.Windows.Controls.TextBox pathTextBox)
         {
             dialogFileIn = new OpenFileDialog();
@@ -93,7 +93,7 @@ namespace Crypter
 
         }
 
-        // Interaction with GUI
+        // Interaction with GUI.
         public void HandleFileOut(System.Windows.Controls.TextBox pathTextBox)
         {
             dialogFileOut = new OpenFileDialog();
@@ -107,7 +107,7 @@ namespace Crypter
                 return;
         }
 
-        // Interaction with GUI
+        // Interaction with GUI.
         public void HandleCipherMode(string tempCipherMode)
         {
             if (tempCipherMode == "ECB")
@@ -121,7 +121,7 @@ namespace Crypter
 
         }
 
-        // Interaction with GUI
+        // Interaction with GUI.
         public void HandleSelectedUser(User tempSelectedUser)
         {
             selectedUser = tempSelectedUser;
@@ -245,18 +245,24 @@ namespace Crypter
         // Add receivers from encrypted file xml.
         public void AddReceiversDecrypt(string decryptPath)
         {
-            receiverDecryptList.Clear();
+            receiverDecryptList.Clear(); 
+
             ICollectionView view = CollectionViewSource.GetDefaultView(receiverDecryptList);
             XmlReader read = XmlReader.Create(decryptPath);
+
+            // Try to read receiver from file header
             try
             {
                 while (read.ReadToFollowing("User"))
                 {
                     string tempName = "";
+
                     read.ReadToFollowing("Name");
                     read.Read();
                     tempName = read.Value;
+
                     User newUser;
+
                     if (File.Exists(receiversDecryptPath + tempName))
                     {
                         newUser = new User() { Name = Path.GetFileNameWithoutExtension(tempName), encryptedKey = File.ReadAllBytes(receiversDecryptPath + tempName) };
@@ -285,22 +291,26 @@ namespace Crypter
             random.NextBytes(IV);
         }
 
+        // Interaction with GUI.
         public void HandlePassword(string tempPassword)
         {
             password = tempPassword;
         }
 
+        // Interaction with GUI, worker for updating progress bar.
         public void HandleEncryption(BackgroundWorker worker)
         {
-
+            // Check if all fields are typed.
             if (!Check())
                 return;
+
             paddingMode = PaddingMode.PKCS7;
             GenerateKeyAndIV();
             CreateXmlHeader();
             EncryptBytes(worker);
         }
 
+        // Interaction with GUI.
         public void HandleDecryption(BackgroundWorker worker)
         {
             paddingMode = PaddingMode.PKCS7;
@@ -310,12 +320,14 @@ namespace Crypter
 
         }
 
+        // Get password SHA-256.
         public static byte[] GetHash(string inputString)
         {
             HashAlgorithm algorithm = SHA256.Create();
             return algorithm.ComputeHash(Encoding.ASCII.GetBytes(inputString));
         }
 
+        // Receiver private key is encrypted with Rijndael 256 bits ECB and password SHA-256 as key.
         public void HandlePassword()
         {
             string temp = selectedUser.Name;
@@ -351,7 +363,7 @@ namespace Crypter
         public void CreateXmlHeader()
         {
             XmlWriterSettings settings = new XmlWriterSettings();
-            settings.Indent = true;
+            settings.Indent = true; // xml formatting
             settings.WriteEndDocumentOnClose = true;
             using (XmlWriter write = XmlWriter.Create(dialogFileOut.FileName, settings))
             {
@@ -382,7 +394,7 @@ namespace Crypter
                 write.Flush();
                 write.Close();
             }
-
+            // New line and EXT character append.
             File.AppendAllText(dialogFileOut.FileName, "\n" + Char.ToString((char)3));
 
         }
@@ -403,6 +415,7 @@ namespace Crypter
             return decryptedByteArray;
         }
 
+        // Read xml header, if typed user not match to choosen, decrypt with typed password SHA-256.
         public void ReadXmlHeader()
         {
             using (XmlReader read = XmlReader.Create(dialogFileIn.FileName))
@@ -465,6 +478,7 @@ namespace Crypter
             }
         }
 
+        // Count bytes to avoid header.
         public int GetHeaderByteCount()
         {
             int countBytes = 0;
@@ -484,6 +498,7 @@ namespace Crypter
             return countBytes;
         }
 
+        // Worker update progress bar.
         void EncryptBytes(BackgroundWorker worker)
         {
             using (Rijndael rijAlg = Rijndael.Create())
@@ -527,6 +542,7 @@ namespace Crypter
             }
         }
 
+        // Worker update progress bar.
         void DecryptBytes(BackgroundWorker worker)
         {
             using (Rijndael rijAlg = Rijndael.Create())
